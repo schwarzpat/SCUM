@@ -180,4 +180,42 @@ def run_statistical_ensemble(
 
 # Run Seasonal Naive model
 fcst_df_sn, total_time_sn, model_name_sn = run_seasonal_naive(
+    train_df=train_df,
+    horizon=horizon,
+    freq=freq,
+    seasonality=seasonality,
+    level=level,
+)
+fcst_df_sn = fcst_from_level_to_quantiles(fcst_df_sn, model_name_sn, quantiles)
+print(f"Model: {model_name_sn}, Total time: {total_time_sn:.2f} seconds")
+print(fcst_df_sn)
+
+# Save Seasonal Naive forecasts to Excel using Polars write_excel
+sn_output_path = os.path.join(output_dir, f"{model_name_sn}_forecasts.xlsx")
+fcst_df_sn.write_excel(
+    workbook=sn_output_path,
+    worksheet=model_name_sn,  # Optional: specify worksheet name
+    autofit=True  # Adjust column widths to fit content
+)
+print(f"Forecasts saved to {sn_output_path}")
+
+# Run Statistical Ensemble
+fcst_df_se, total_time_se, model_name_se = run_statistical_ensemble(
+    train_df=train_df,
+    horizon=horizon,
+    freq=freq,
+    seasonality=seasonality,
+    quantiles=quantiles,
+)
+print(f"Model: {model_name_se}, Total time: {total_time_se:.2f} seconds")
+print(fcst_df_se)
+
+# Save Statistical Ensemble forecasts to Excel using Polars write_excel
+se_output_path = os.path.join(output_dir, f"{model_name_se}_forecasts.xlsx")
+fcst_df_se.write_excel(
+    workbook=se_output_path,
+    worksheet=model_name_se,  # Optional: specify worksheet name
+    autofit=True  # Adjust column widths to fit content
+)
+print(f"Forecasts saved to {se_output_path}")
     train​⬤
