@@ -2,6 +2,7 @@ import os
 from time import time
 from typing import List, Tuple
 
+# Set environment variables for StatsForecast optimization
 os.environ["NIXTLA_NUMBA_RELEASE_GIL"] = "1"
 os.environ["NIXTLA_NUMBA_CACHE"] = "1"
 os.environ["NIXTLA_ID_AS_COL"] = "true"
@@ -38,35 +39,34 @@ train_df = train_df.with_columns(
     (pl.col('org') + '_' + pl.col('channel')).alias('unique_id')
 )
 
-# Rename columns
-train_df = train_df.rename({
-    'yymmdd': 'ds',
-    'alerts': 'y'
-})
-
-# Ensure 'ds' is of datetime type
+# Ensure 'yymmdd' is of datetime type
 train_df = train_df.with_columns(
-    pl.col('ds').str.strptime(pl.Date, fmt='%Y%m%d')  # Adjust '%Y%m%d' if needed
+    pl.col('yymmdd').str.strptime(pl.Date, fmt='%Y%m%d')  # Adjust '%Y%m%d' if needed
 )
 
+# Rename 'alerts' to 'y'
+train_df = train_df.rename({'alerts': 'y'})
+
 # Resample data to monthly frequency using alternative method
-# Extract year and month from 'ds'
+# Extract year and month from 'yymmdd'
 train_df = train_df.with_columns(
-    pl.col('ds').dt.strftime('%Y-%m').alias('year_month')
+    pl.col('yymmdd').dt.strftime('%Y-%m').alias('year_month')
 )
 
 # Parse 'year_month' back to a date (first day of the month)
 train_df = train_df.with_columns(
-    pl.col('year_month').str.strptime(pl.Date, fmt='%Y-%m').alias('ds_month')
+    pl.col('year_month').str.strptime(pl.Date, fmt='%Y-%m').alias('ds')
 )
 
-# Group by 'unique_id' and 'ds_month', then aggregate 'y' by summing over the month
-train_df = train_df.groupby(['unique_id', 'ds_month']).agg(
+# Group by 'unique_id' and 'ds', then aggregate 'y' by summing over the month
+train_df = train_df.groupby(['unique_id', 'ds']).agg(
     pl.col('y').sum().alias('y')
 )
 
-# Rename 'ds_month' back to 'ds' and select required columns
-train_df = train_df.rename({'ds_month': 'ds'}).select(['unique_id', 'ds', 'y'])
+# Select only the required columns
+train_df = train_df.select(['unique_id', 'ds', 'y'])
+
+# Now 'train_df' contains only 'unique_id', 'ds', and 'y'
 
 def run_seasonal_naive(
     train_df: pl.DataFrame,
@@ -180,41 +180,4 @@ def run_statistical_ensemble(
 
 # Run Seasonal Naive model
 fcst_df_sn, total_time_sn, model_name_sn = run_seasonal_naive(
-    train_df=train_df,
-    horizon=horizon,
-    freq=freq,
-    seasonality=seasonality,
-    level=level,
-)
-fcst_df_sn = fcst_from_level_to_quantiles(fcst_df_sn, model_name_sn, quantiles)
-print(f"Model: {model_name_sn}, Total time: {total_time_sn:.2f} seconds")
-print(fcst_df_sn)
-
-# Save Seasonal Naive forecasts to Excel using Polars write_excel
-sn_output_path = os.path.join(output_dir, f"{model_name_sn}_forecasts.xlsx")
-fcst_df_sn.write_excel(
-    workbook=sn_output_path,
-    worksheet=model_name_sn,  # Optional: specify worksheet name
-    autofit=True  # Adjust column widths to fit content
-)
-print(f"Forecasts saved to {sn_output_path}")
-
-# Run Statistical Ensemble
-fcst_df_se, total_time_se, model_name_se = run_statistical_ensemble(
-    train_df=train_df,
-    horizon=horizon,
-    freq=freq,
-    seasonality=seasonality,
-    quantiles=quantiles,
-)
-print(f"Model: {model_name_se}, Total time: {total_time_se:.2f} seconds")
-print(fcst_df_se)
-
-# Save Statistical Ensemble forecasts to Excel using Polars write_excel
-se_output_path = os.path.join(output_dir, f"{model_name_se}_forecasts.xlsx")
-fcst_df_se.write_excel(
-    workbook=se_output_path,
-    worksheet=model_name_se,  # Optional: specify worksheet name
-    autofit=True  # Adjust column widths to fit content
-)
-print(f"Forecasts saved to {se_output_path}")
+    train​⬤
